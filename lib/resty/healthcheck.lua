@@ -1037,6 +1037,8 @@ function checker:run_single_check(ip, port, hostname, hostheader)
   local headers
   if self.checks.active._headers_str then
     headers = self.checks.active._headers_str
+  elseif req_headers == nil then
+      headers = ""
   else
     local headers_length = nkeys(req_headers)
     if headers_length > 0 then
@@ -1424,6 +1426,7 @@ end
 
 
 local NO_DEFAULT = {}
+local NO_DEFAULT_NON_NESTED = { ["__non_nested"] = "" }       -- value that accepts a top level table
 local MAXNUM = 2^31 - 1
 
 
@@ -1448,7 +1451,7 @@ local function fill_in_settings(opts, defaults, ctx)
 
     if v ~= nil then
       if type(v) == "table" then
-        if default[1] then -- do not recurse on arrays
+        if default == NO_DEFAULT_NON_NESTED or default[1] then -- do not recurse on non-nested tables or arrays
           obj[k] = v
         else
           ctx[#ctx + 1] = k
@@ -1461,7 +1464,7 @@ local function fill_in_settings(opts, defaults, ctx)
         end
         obj[k] = v
       end
-    elseif default ~= NO_DEFAULT then
+    elseif default ~= NO_DEFAULT and default ~= NO_DEFAULT_NON_NESTED then -- do not assign dummy default values
       obj[k] = default
     end
 
@@ -1484,7 +1487,7 @@ local function get_defaults()
         http_path = "/",
         https_sni = NO_DEFAULT,
         https_verify_certificate = true,
-        headers = {""},
+        headers = NO_DEFAULT_NON_NESTED,
         healthy = {
           interval = 0, -- 0 = disabled by default
           http_statuses = { 200, 302 },
